@@ -4,7 +4,7 @@ const packet = require('dns-packet');
 const types = require('dns-packet/types');
 
 var dnssec = artifacts.require('./DNSSECImpl');
-const Result = require('@ensdomains/dnsprovejs/dist/dns/result');
+const Result = require('../lib/result.js');
 
 const util = require('util');
 web3.currentProvider.send = util.promisify(web3.currentProvider.send);
