@@ -1,5 +1,5 @@
 {
-  "name": "@ensdomains/dnssec-oracle",
+  "name": "@rsksmart/dnssec-oracle",
   "version": "0.1.2",
   "requires": true,
   "lockfileVersion": 1,
@@ -21,5 +21,21 @@
   },
   "dependencies": {
     "dns-packet": "^5.0.4"
-  }
+  },
+  "description": "[![Build Status](https://travis-ci.org/ensdomains/dnssec-oracle.svg?branch=master)](https://travis-ci.org/ensdomains/dnssec-oracle) [![License](https://img.shields.io/badge/License-BSD--2--Clause-blue.svg)](LICENSE)",
+  "main": "truffle.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rnsdomains/rns-dnssec-oracle.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rnsdomains/rns-dnssec-oracle/issues"
+  },
+  "homepage": "https://github.com/rnsdomains/rns-dnssec-oracle#readme"
 }

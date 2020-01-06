@@ -4,7 +4,7 @@ const packet = require('dns-packet');
 const types = require('dns-packet/types');
 
 var dnssec = artifacts.require('./DNSSECImpl');
-const Result = require('../lib/result.js');
+const Result = require('@rsksmart/dnsprovejs/lib/dns/result');
 
 const util = require('util');
 web3.currentProvider.send = util.promisify(web3.currentProvider.send);
@@ -1189,7 +1189,7 @@ contract('DNSSEC', accounts => {
     // will be again every 2^32 seconds or 136 years
     await web3.currentProvider.send({
       method: 'evm_increaseTime',
-      params: (1552612005 - Date.now() / 1000) >>> 0
+      params: [(1552612005 - Date.now() / 1000) >>> 0]
     });
     for (let i = 0; i < test_rrsets.length; i++) {
       var rrset = test_rrsets[i];
