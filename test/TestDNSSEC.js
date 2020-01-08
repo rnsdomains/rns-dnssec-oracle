@@ -6,6 +6,17 @@ const types = require('dns-packet/types');
 var dnssec = artifacts.require('./DNSSECImpl');
 const Result = require('@rsksmart/dnsprovejs/lib/dns/result');
 
+const RSASHA1Algorithm = artifacts.require('./algorithms/RSASHA1Algorithm');
+const RSASHA256Algorithm = artifacts.require('./algorithms/RSASHA256Algorithm');
+const SHA1Digest = artifacts.require('./digests/SHA1Digest');
+const SHA256Digest = artifacts.require('./digests/SHA256Digest');
+const SHA1NSEC3Digest = artifacts.require('./nsec3digests/SHA1NSEC3Digest');
+const DNSSEC = artifacts.require('./DNSSECImpl');
+const DummyAlgorithm = artifacts.require('./algorithms/DummyAlgorithm');
+const DummyDigest = artifacts.require('./digests/DummyDigest');
+const P256SHA256Algorithm = artifacts.require('P256SHA256Algorithm.sol');
+const EllipticCurve = artifacts.require('EllipticCurve.sol');
+
 const util = require('util');
 web3.currentProvider.send = util.promisify(web3.currentProvider.send);
 
@@ -98,10 +109,9 @@ async function verifyFailedSubmission(instance, data, sig, proof) {
   } catch (error) {
     // @TODO use: https://github.com/ensdomains/root/blob/master/test/helpers/Utils.js#L8
     // Assert ganache revert exception
-    assert.equal(
-      error.message,
-      'Returned error: VM Exception while processing transaction: revert'
-    );
+    // This checked made sure the vm reverted by checking the ganache typical error
+    // We changed it so it can run also on RSK
+    assert(error.toString().includes("revert"));
   }
 
   // Assert geth failed transaction
@@ -110,52 +120,7 @@ async function verifyFailedSubmission(instance, data, sig, proof) {
   }
 }
 
-contract('DNSSEC', function(accounts) {
-  before(async () => {
-    const instance = await dnssec.deployed();
-    const keys = rootKeys();
-    const [signedData] = hexEncodeSignedSet(keys);
-    await instance.submitRRSet(
-      signedData,
-      Buffer.alloc(0),
-      anchors.encode(anchors.realEntries)
-    );
-  });
-
-  let result;
-  beforeEach(async () => {
-    ({ result } = await web3.currentProvider.send({
-      method: 'evm_snapshot'
-    }));
-  });
-  afterEach(async () => {
-    await web3.currentProvider.send({
-      method: 'evm_revert',
-      params: result
-    });
-  });
-
-  it('should have a default algorithm and digest set', async function() {
-    var instance = await dnssec.deployed();
-    assert.notEqual(
-      await instance.algorithms(8),
-      '0x0000000000000000000000000000000000000000'
-    );
-    assert.notEqual(
-      await instance.algorithms(253),
-      '0x0000000000000000000000000000000000000000'
-    );
-    assert.notEqual(
-      await instance.digests(2),
-      '0x0000000000000000000000000000000000000000'
-    );
-    assert.notEqual(
-      await instance.digests(253),
-      '0x0000000000000000000000000000000000000000'
-    );
-  });
-
-  const validityPeriod = 2419200;
+const validityPeriod = 2419200;
   const expiration = Date.now() / 1000 - 15 * 60 + validityPeriod;
   const inception = Date.now() / 1000 - 15 * 60;
   function rootKeys() {
@@ -204,6 +169,99 @@ contract('DNSSEC', function(accounts) {
     ];
     return { name, sig, rrs };
   }
+
+  contract('DNSSEC First Test', accounts => {
+    it('updates the inception whether the RRs/hash have changed or not', async () => {
+        const instance = await dnssec.deployed();
+        const keys = rootKeys();
+        keys.sig.data.inception++;
+        const [signedData] = hexEncodeSignedSet(keys);
+        const [oldInception] = Object.values(
+          await instance.rrdata(
+            types.toType('DNSKEY'),
+            `0x${packet.name.encode('.').toString('hex')}`
+          )
+        );
+        assert.notEqual(oldInception, keys.sig.data.inception >>> 0);
+        await instance.submitRRSet(
+          signedData,
+          Buffer.alloc(0),
+          anchors.encode(anchors.realEntries)
+        );
+        const [newInception] = Object.values(
+          await instance.rrdata(
+            types.toType('DNSKEY'),
+            `0x${packet.name.encode('.').toString('hex')}`
+          )
+        );
+        assert.equal(newInception, keys.sig.data.inception >>> 0);
+      });
+  });
+
+  contract('DNSSEC', function(accounts) {
+    beforeEach(async () => {
+      let anchorsList = anchors.realEntries;
+      anchorsList.push(anchors.dummyEntry);
+      instance = await dnssec.new(anchors.encode(anchorsList));
+
+      let tasks = [];
+
+      const rsasha1 = await RSASHA1Algorithm.deployed();
+      tasks.push(instance.setAlgorithm(5, rsasha1.address));
+      tasks.push(instance.setAlgorithm(7, rsasha1.address));
+
+      const rsasha256 = await RSASHA256Algorithm.deployed();
+      tasks.push(instance.setAlgorithm(8, rsasha256.address));
+
+      const sha1 = await SHA1Digest.deployed();
+      tasks.push(instance.setDigest(1, sha1.address));
+
+      const sha256 = await SHA256Digest.deployed();
+      tasks.push(instance.setDigest(2, sha256.address));
+
+      const nsec3sha1 = await SHA1NSEC3Digest.deployed();
+      tasks.push(instance.setNSEC3Digest(1, nsec3sha1.address));
+
+      const p256 = await P256SHA256Algorithm.deployed();
+      tasks.push(instance.setAlgorithm(13, p256.address));
+
+      const dummyalgorithm = await DummyAlgorithm.deployed();
+      tasks.push(instance.setAlgorithm(253, dummyalgorithm.address));
+      tasks.push(instance.setAlgorithm(254, dummyalgorithm.address));
+
+      const dummydigest = await DummyDigest.deployed();
+      tasks.push(instance.setDigest(253, dummydigest.address));
+
+      await Promise.all(tasks);
+
+      const keys = rootKeys();
+      const [signedData] = hexEncodeSignedSet(keys);
+      await instance.submitRRSet(
+        signedData,
+        Buffer.alloc(0),
+        anchors.encode(anchors.realEntries)
+      );
+    });
+
+  it('should have a default algorithm and digest set', async function() {
+    var instance = await dnssec.deployed();
+    assert.notEqual(
+      await instance.algorithms(8),
+      '0x0000000000000000000000000000000000000000'
+    );
+    assert.notEqual(
+      await instance.algorithms(253),
+      '0x0000000000000000000000000000000000000000'
+    );
+    assert.notEqual(
+      await instance.digests(2),
+      '0x0000000000000000000000000000000000000000'
+    );
+    assert.notEqual(
+      await instance.digests(253),
+      '0x0000000000000000000000000000000000000000'
+    );
+  });
 
   it('should reject signatures with non-matching algorithms', async function() {
     var instance = await dnssec.deployed();
@@ -580,31 +638,6 @@ contract('DNSSEC', function(accounts) {
     await verifySubmission(instance, ...hexEncodeSignedSet(keys));
   });
 
-  it('updates the inception whether the RRs/hash have changed or not', async () => {
-    const instance = await dnssec.deployed();
-    const keys = rootKeys();
-    keys.sig.data.inception++;
-    const [signedData] = hexEncodeSignedSet(keys);
-    const [oldInception] = Object.values(
-      await instance.rrdata(
-        types.toType('DNSKEY'),
-        `0x${packet.name.encode('.').toString('hex')}`
-      )
-    );
-    assert.notEqual(oldInception, keys.sig.data.inception >>> 0);
-    await instance.submitRRSet(
-      signedData,
-      Buffer.alloc(0),
-      anchors.encode(anchors.realEntries)
-    );
-    const [newInception] = Object.values(
-      await instance.rrdata(
-        types.toType('DNSKEY'),
-        `0x${packet.name.encode('.').toString('hex')}`
-      )
-    );
-    assert.equal(newInception, keys.sig.data.inception >>> 0);
-  });
 
   it('should reject entries that are older', async function() {
     var instance = await dnssec.deployed();
@@ -1189,7 +1222,15 @@ contract('DNSSEC', accounts => {
     // will be again every 2^32 seconds or 136 years
     await web3.currentProvider.send({
       method: 'evm_increaseTime',
-      params: [(1552612005 - Date.now() / 1000) >>> 0]
+      params: [(1552612005 - Date.now() / 1000) >>> 0],
+      jsonrpc: "2.0",
+      id : 0
+    });
+    await web3.currentProvider.send({ 
+      jsonrpc: "2.0",
+      method: "evm_mine",
+      params: [],
+      id: 1
     });
     for (let i = 0; i < test_rrsets.length; i++) {
       var rrset = test_rrsets[i];

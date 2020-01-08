@@ -13,7 +13,7 @@ const dnsAnchors = require('../lib/anchors.js');
 
 module.exports = function(deployer, network) {
   return deployer.then(async () => {
-    let dev = network == 'test' || network == 'local';
+    let dev = network == 'test' || network == 'local' || network == 'ganache';
     // From http://data.iana.org/root-anchors/root-anchors.xml
     let anchors = dnsAnchors.realEntries;
 
