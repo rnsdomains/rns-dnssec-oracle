@@ -6,6 +6,7 @@
   "devDependencies": {
     "@ensdomains/buffer": "^0.0.8",
     "@ensdomains/solsha1": "^0.0.2",
+    "@rsksmart/dnsprovejs": "file:../rns-dnsprovejs",
     "elliptic-solidity": "1.0.0",
     "eth-gas-reporter": "^0.1.12",
     "rfc4648": "^1.1.0",
