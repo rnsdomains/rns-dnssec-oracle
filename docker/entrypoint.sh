@@ -1,3 +1,3 @@
 #!/bin/sh
 /usr/bin/supervisord &
-npm install && npm test
+sudo npm cache clean --force && npm install && npm test
