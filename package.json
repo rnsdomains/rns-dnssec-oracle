@@ -15,7 +15,7 @@
   },
   "scripts": {
     "pretest": "npx truffle compile",
-    "test": "npm run lint && npx truffle test --network regtest",
+    "test": "npx truffle test --network regtest",
     "lint": "npx solium --dir ./contracts"
   },
   "dependencies": {
