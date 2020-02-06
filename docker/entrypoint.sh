@@ -1,3 +1,3 @@
 #!/bin/sh
 /usr/bin/supervisord &
-npm install && npm test
+npm install --no-cache && npm test
