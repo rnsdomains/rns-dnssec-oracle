@@ -8,7 +8,7 @@ jobs:
             - setup_remote_docker
             - run:
                 name: Build docker
-                command: docker build -t regtest -f Dockerfile.RSKRegtest .
+                command: docker build -t regtest -f ./docker/Dockerfile.RSKRegtest .
             - run:
                 name: Run tests
                 command: docker run --name regtest-node-01 --rm -p 4444:4444 -p 30305:30305 regtest
