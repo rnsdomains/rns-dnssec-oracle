@@ -5,8 +5,9 @@
   "lockfileVersion": 1,
   "devDependencies": {
     "@ensdomains/buffer": "^0.0.8",
-    "@ensdomains/solsha1": "^0.0.2",
     "@ensdomains/dnsprovejs": "0.0.9",
+    "@ensdomains/solsha1": "^0.0.2",
+    "bignumber.js": "^9.0.0",
     "elliptic-solidity": "1.0.0",
     "eth-gas-reporter": "^0.1.12",
     "rfc4648": "^1.1.0",
